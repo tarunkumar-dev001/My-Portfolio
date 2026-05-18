@@ -8,15 +8,39 @@ const contactMetadata = [
 
 export default function Contact() {
   const [formState, setFormState] = useState({ name: '', email: '', message: '' });
+  const [submitState, setSubmitState] = useState({ status: 'idle', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    window.alert('Message ready to send! Please wire this form to your preferred backend.');
+    setIsSubmitting(true);
+    setSubmitState({ status: 'idle', message: '' });
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formState),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to send message.');
+      }
+
+      setSubmitState({ status: 'success', message: payload.message || 'Message sent successfully.' });
+      setFormState({ name: '', email: '', message: '' });
+    } catch (error) {
+      setSubmitState({ status: 'error', message: error.message || 'Unable to send message.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -67,8 +91,19 @@ export default function Contact() {
             required
           />
         </div>
-        <button type="submit" className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110">
-          Send Message
+
+        {submitState.message && (
+          <div className={`rounded-2xl px-4 py-3 text-sm ${submitState.status === 'success' ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-400/30' : 'bg-rose-500/10 text-rose-200 border border-rose-400/30'}`}>
+            {submitState.message}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? 'Sending…' : 'Send Message'}
         </button>
       </form>
       <aside className="space-y-6 rounded-3xl border border-slate-700/60 bg-slate-900/90 p-6 shadow-neon backdrop-blur-xl sm:p-8">
